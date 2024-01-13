@@ -31,16 +31,20 @@ namespace HingeBeasts
     /// </summary>
     public partial class MainWindow : Window
     {
+        private int RANDOMSEED = 2;
         public float DAMPING = 0.0f;
         public float RESTITUTION = 0.6f;
         public float FRICTION = 0.9f;
-        public float GRAVITY = 9.5f;
-        public int NAnimals = 14;
+        public float GRAVITY = 6f;
+        public int NAnimals = 20;
         private float scaleFactor = 12f;
         private float angleCorrection = 0.5f;
         private Vector2 offset;
         private DispatcherTimer gameLoopTimer;
-        private World myWorld;
+        public World myWorld;
+        public Random RNG;
+        List<Animal> creach;
+
 
         public MainWindow()
         {
@@ -56,10 +60,10 @@ namespace HingeBeasts
             BodyDef def;
             Body aBody;
             Vector2[] vertices;
-            //List<Animal> creach;
 
-            offset = new Vector2((float)(0.5*myCanvas.Width / scaleFactor),1f);
-
+            offset = new Vector2((float)(0.5 * myCanvas.Width / scaleFactor), 2f);
+            RNG = new Random(RANDOMSEED);
+            
             // Create a world with gravity
             Vector2 gravity = new Vector2(0, -GRAVITY);
             myWorld = new World(gravity);
@@ -113,23 +117,15 @@ namespace HingeBeasts
             vertices[2] = new Vector2(-centreX+leftX - 1, 0.5f);
             affixPolygon(aBody, vertices, 0, Brushes.Green);
 
-            // Create a dynamic body and set its position
-            def = new BodyDef();
-            def.BodyType = BodyType.DynamicBody;
-            def.Position.Set(0, 10);
-            aBody = myWorld.CreateBody(def);
-            // Affix a shape to the body
-            vertices = new Vector2[4];
-            vertices[0] = new Vector2(-1f, -1f);
-            vertices[1] = new Vector2(1f, -1f);
-            vertices[2] = new Vector2(1f, 1f);
-            vertices[3] = new Vector2(-1f, 1f);
-            affixPolygon(aBody, vertices, 1, Brushes.Red);
-            // Set its velocity
-            aBody.SetLinearVelocity(new Vector2(7.2f, 23f));
-            aBody.SetAngularVelocity(-17.5f);
+            creach = new List<Animal>();
+            Animal beastie;
+            for (int i = 0; i < NAnimals; i++)
+            {
+                beastie = new Animal(this, (float)((rightX-leftX)*(RNG.NextDouble()*0.6-0.3)), (float)((topY-bottomY) * (RNG.NextDouble() * 1.5)+0.2));
+                creach.Add(beastie);
+            }
 
-            // Create another dynamic body and set its position
+            // Create a dynamic body and set its position
             def = new BodyDef();
             def.BodyType = BodyType.DynamicBody;
             def.Position.Set(12, 35);
@@ -161,7 +157,7 @@ namespace HingeBeasts
             //Set its velocity
             aBody.SetAngularVelocity(-15f);
         }
-        private void affixPolygon(Body bod, Vector2[] vertices, float density, SolidColorBrush colour)
+        public void affixPolygon(Body bod, Vector2[] vertices, float density, SolidColorBrush colour)
         {
             PolygonShape myBox2DPolygon = new PolygonShape();
             myBox2DPolygon.Set(vertices);
@@ -171,7 +167,7 @@ namespace HingeBeasts
             fix.UserData = new MyShapeInfo(new Polygon { Fill = colour, Points = Vector2ListToPointCollection(vertices) });
         }
 
-        private void affixCircle(Body bod, float radius, float density, SolidColorBrush colour)
+        public void affixCircle(Body bod, float radius, float density, SolidColorBrush colour)
         {
             CircleShape myBox2DCircle = new CircleShape();
             myBox2DCircle.Radius = radius;
@@ -190,6 +186,7 @@ namespace HingeBeasts
             }
             return output;
         }
+
         private void GameLoop(object sender, EventArgs e)
         {
             UpdateGame();
@@ -198,7 +195,9 @@ namespace HingeBeasts
 
         private void UpdateGame()
         {
-            myWorld.Step(1 / 60f, 6, 2);
+            foreach (Animal beastie in creach) beastie.control(RNG);
+
+            myWorld.Step(1 / 15f, 5, 2);
         }
 
         private void renderGame()
@@ -206,7 +205,6 @@ namespace HingeBeasts
             myCanvas.Children.Clear();
             foreach (Body body in myWorld.BodyList)
             {
-                //Console.WriteLine(body.GetPosition());
                 renderBody(body);
             }
         }
